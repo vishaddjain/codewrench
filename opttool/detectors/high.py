@@ -1,32 +1,9 @@
 import ast
+from .base import BaseDetectors
 
-class NestedLoopDetector(ast.NodeVisitor):
+class HighDetectors(ast.NodeVisitor):
     
     CHEAP_CALLS = {"print", "len", "range", "str", "int", "float", "bool", "type"}
-
-    def __init__(self):
-        self.depth = 0
-        self.warnings = []
-        self.attr_counts = {}
-
-    def visit_For(self, node):
-        self.depth += 1
-        if self.depth >= 2 :
-            self.warnings.append(
-                f"Nested loop at line {node.lineno} - potential O(n²)"
-            )
-        self.generic_visit(node)
-        self.depth -= 1
-
-    visit_While = visit_For
-
-    def visit_FunctionDef(self, node):
-        original_depth = self.depth
-        self.depth = 0
-        self.generic_visit(node)
-        self.depth = original_depth
-
-    visit_AsyncFunctionDef = visit_FunctionDef
 
     def visit_Call(self, node):
         if self.depth >= 1:
@@ -72,12 +49,3 @@ class NestedLoopDetector(ast.NodeVisitor):
                 )
         self.generic_visit(node)
 
-# tree = ast.parse(code)
-# detector = NestedLoopDetector()
-# detector.visit(tree)
-
-# if detector.warnings:
-#     for w in detector.warnings:
-#         print(w)
-# else:
-#     print("No issues found!")
