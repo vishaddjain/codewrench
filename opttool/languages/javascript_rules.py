@@ -1,0 +1,8 @@
+LOOP_TYPES = ["for_statement", "for_in_statement", "for_of_statement", "while_statement"]
+FUNCTION_CALL = ["call_expression"]
+FUNCTION_DEF = ["function_declaration", "arrow_function", "function_expression"]
+ATTRIBUTE_ACCESS = ["member_expression"]
+STRING_CONCAT = ["augmented_assignment_expression"]
+EXCEPTION_HANDLER = ["catch_clause"]
+GLOBAL_STATEMENT = []
+

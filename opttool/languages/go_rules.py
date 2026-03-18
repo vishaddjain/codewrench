@@ -1,0 +1,7 @@
+LOOP_TYPES = ["for_statement"]
+FUNCTION_CALL = ["call_expression"]
+FUNCTION_DEF = ["function_declaration", "method_declaration"]
+ATTRIBUTE_ACCESS = ["selector_expression"]
+STRING_CONCAT = ["assignment_statement"]
+EXCEPTION_HANDLER = ["defer_statement"]
+GLOBAL_STATEMENT = ["var_declaration"]
