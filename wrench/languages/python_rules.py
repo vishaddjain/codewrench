@@ -1,0 +1,8 @@
+LOOP_TYPES = ["for_statement", "while_statement"]
+FUNCTION_CALL = ["call"]
+FUNCTION_DEF = ["function_definition"]
+ATTRIBUTE_ACCESS = ["attribute"]
+STRING_CONCAT = ["augmented_assignment"]
+EXCEPTION_HANDLER = ["except_clause"]
+GLOBAL_STATEMENT = ["global_statement"]
+
