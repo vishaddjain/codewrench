@@ -33,3 +33,29 @@ Be concise and practical.
         messages=[{"role": "user", "content": prompt}]
     )
     return response.choices[0].message.content
+
+def get_fixed_code(code, warnings):
+    if not warnings:
+        return code
+    
+    warnings_text = "\n".join(f"- {w}" for w in warnings)
+    
+    prompt = f"""
+You are a performance analytics expert.
+
+Here is the original code:
+{code}
+
+These performance issues were detected:
+{warnings_text}
+
+Return ONLY the fixed version of the complete code.
+No explanations, no comments, no markdown, no code blocks.
+Just the raw fixed code that can be executed directly.
+"""
+    
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return response.choices[0].message.content
