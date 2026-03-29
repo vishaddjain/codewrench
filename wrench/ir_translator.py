@@ -9,6 +9,7 @@ GENERIC_TYPES = {
     "EXCEPTION_HANDLER": "exception_handler",
     "GLOBAL_STATEMENT": "global_statement",
     "IMPORT": "import"
+    "AWAIT": "await"
 }
 
 class IRTranslator:
@@ -17,6 +18,14 @@ class IRTranslator:
 
     def translate(self, node):
         node_type = self.get_generic_type(node.type)
+
+        if node_type is None:
+            list_concat_types = getattr(self.rules, "LIST_CONCAT", [])
+            if node.type in list_concat_types:
+                op = node.child_by_field_name("operator")
+                if op and op.text.decode("utf8") == "+":
+                    node_type = "list_concat"
+            
         lineno = node.start_point[0] + 1
         children = [self.translate(child) for child in node.children]
         return IRNode(node_type or node.type, lineno, children)
@@ -53,9 +62,12 @@ class IRTranslator:
             if child.type == "identifier":
                 return child.text.decode("utf8")
             elif child.type == "attribute":
+                parts = []
                 for subchild in child.children:
                     if subchild.type == "identifier":
-                        return subchild.text.decode("utf8")
+                        parts.append(subchild.text.decode("utf8"))
+                if parts:
+                    return ".".join(parts)
         return None
 
     def get_attribute_name(self, node):
