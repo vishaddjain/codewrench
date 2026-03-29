@@ -7,6 +7,8 @@ from ai_engine import analyse, get_fixed_code
 from parser_engine import get_parser, detect_language
 from ir_translator import IRTranslator
 from profilers.profiler import profile_file, parse_stats, write_temp_file, delete_temp_file
+from errors import handle_error
+from wrenchignore import load_wrenchignore, is_ignored
 
 IGNORE_DIRS = {"venv", "node_modules", ".git", "__pycache__", "dist", "build", ".vscode"}
 
@@ -28,17 +30,44 @@ def get_rules(language):
     return rules
 
 def run_analysis(filepath):
+    # wrenchignore check
+    patterns = load_wrenchignore(os.path.dirname(filepath))
+    if is_ignored(filepath, patterns):
+        return [], None, None
+    #language check
     language = detect_language(filepath)
     if language is None:
-        return [], language, None
+        handle_error("unsupported_language", filepath)
+        return [], None, None
 
-    code = open(filepath).read()
-    rules = get_rules(language)
+    # file reading
+    try:
+        with open(filepath, "r", encoding="utf8") as f:
+            code = f.read()
+    except FileNotFoundError:
+        handle_error("file_not_found", filepath, fatal=True)
+    except PermissionError:
+        handle_error("permission_error", filepath)
+        return [], None, None
+    except UnicodeDecodeError:
+        handle_error("binary_file", filepath)
+        return [], None, None
 
-    parser = get_parser(language)
-    tree = parser.parse(bytes(code, "utf8"))
-    translator = IRTranslator(rules)
-    ir_tree = translator.translate(tree.root_node)
+    # empty file check
+    if not code.strip():
+        handle_error("empty_file", filepath)
+        return [], None, None
+
+    # parsing
+    try:
+        rules = get_rules(language)
+        parser = get_parser(language)
+        tree = parser.parse(bytes(code, "utf8"))
+        translator = IRTranslator(rules)
+        ir_tree = translator.translate(tree.root_node)
+    except Exception:
+        handle_error("syntax_error", filepath)
+        return [], None, None
 
     warnings = []
     for DetectorClass in [HighDetectors, MediumDetectors]:
@@ -51,16 +80,21 @@ def run_analysis(filepath):
     return warnings, language, code
 
 def get_files(folder):
+    patterns = load_wrenchignore(folder)
     files = []
     for root, dirs, filenames in os.walk(folder):
         dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
         for f in filenames:
-            if detect_language(f) is not None:
-                files.append(os.path.join(root, f))
+            filepath = os.path.join(root, f)
+            if detect_language(f) is not None and not is_ignored(filepath, patterns):
+                files.append(filepath)
     return files
 
 def analyse_single_file(filename):
     warnings, language, code = run_analysis(filename)
+
+    if language is None:
+        return
 
     if not warnings:
         print("No issues found!")
@@ -72,7 +106,11 @@ def analyse_single_file(filename):
     results = {}
 
     def run_explanation():
-        results["explanation"] = analyse(code, warnings)
+        try:
+            results["explanation"] = analyse(code, warnings)
+        except Exception:
+            handle_error("api_error", filename)
+            results["explanation"] = None
 
     def run_profiling():
         try:
@@ -92,8 +130,8 @@ def analyse_single_file(filename):
             results["before"] = before_stats
             results["after"] = after_stats
 
-        except Exception as e:
-            print(f"Profiling error: {e}")
+        except Exception:
+            handle_error("profiling_error", filename)
             results["profiling"] = None
 
     t1 = threading.Thread(target=run_explanation)
@@ -105,8 +143,9 @@ def analyse_single_file(filename):
     t1.join()
     t2.join()
 
-    print("\n--- AI Analysis ---\n")
-    print(results["explanation"])
+    if results.get("explanation"):
+        print("\n--- AI Analysis ---\n")
+        print(results["explanation"])
 
     if results.get("profiling") is None and language != "python":
         print("\n--- Profiling not supported for this language yet ---")
@@ -161,5 +200,4 @@ if os.path.isdir(target):
 elif os.path.isfile(target):
     analyse_single_file(target)
 else:
-    print(f"Error: '{target}' is not a valid file or folder")
-    exit()
+    handle_error("file_not_found", target, fatal=True)
