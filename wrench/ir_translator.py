@@ -9,7 +9,8 @@ GENERIC_TYPES = {
     "EXCEPTION_HANDLER": "exception_handler",
     "GLOBAL_STATEMENT": "global_statement",
     "IMPORT": "import",
-    "AWAIT": "await"
+    "AWAIT": "await",
+    "IDENTIFIER": "identifier"
 }
 
 class IRTranslator:
@@ -18,7 +19,6 @@ class IRTranslator:
 
     def translate(self, node):
         node_type = self.get_generic_type(node.type)
-
         if node_type is None:
             list_concat_types = getattr(self.rules, "LIST_CONCAT", [])
             if node.type in list_concat_types:
@@ -28,7 +28,8 @@ class IRTranslator:
             
         lineno = node.start_point[0] + 1
         children = [self.translate(child) for child in node.children]
-        return IRNode(node_type or node.type, lineno, children)
+        metadata = self.extract_metadata(node, node_type)
+        return IRNode(node_type or f"_raw_{node.type}", lineno, children, metadata)
     
     def extract_metadata(self, node, node_type):
         metadata = {}
@@ -85,9 +86,13 @@ class IRTranslator:
 
     def get_mutable_defaults(self, node):
         mutable_lines = []
+        def check_mutable_recursive(n):
+            if n.type in ("list", "dictionary", "set"):
+                mutable_lines.append(n.start_point[0] + 1)
+            for child in n.children:
+                check_mutable_recursive(child)       
         for child in node.children:
-            if child.type in ("list", "dictionary", "set"):
-                mutable_lines.append(child.start_point[0] + 1)
+            check_mutable_recursive(child)
         return mutable_lines
 
     def get_generic_type(self, tree_sitter_type):

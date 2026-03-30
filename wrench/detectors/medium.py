@@ -7,6 +7,12 @@ class MediumDetectors(BaseDetectors):
     def __init__(self):
         super().__init__()
 
+    def visit_global_statement(self, node):
+        names = node.metadata.get("names", [])
+        for name in names:
+            self.global_vars.add(name)
+        self.generic_visit(node)
+
     def visit_function_call(self, node):
 
         name = node.metadata.get("name", None)
@@ -45,6 +51,10 @@ class MediumDetectors(BaseDetectors):
             self.warnings.append(
                 f"Overly broad 'except Exception' at line {node.lineno} — catch specific exceptions."
             )
+        if self.depth >= 1:
+            self.warnings.append(
+                f"try/except inside loop at line {node.lineno} — exception handling overhead on every iteration, move outside if possible."
+            )
         self.generic_visit(node)
 
     def visit_function_def(self, node):
@@ -54,6 +64,7 @@ class MediumDetectors(BaseDetectors):
                 f"Mutable default argument at line {lineno} — use None instead."
             )
         super().visit_function_def(node)
+
 
     def visit_identifier(self, node):
         if self.depth >= 1:
@@ -65,20 +76,15 @@ class MediumDetectors(BaseDetectors):
         self.generic_visit(node)
 
     def visit_import(self, node):
-        if self.depth > 0:
+        if self.function_depth >= 1:
             self.warnings.append(
                 f"Import is at function level instead of top at line {node.lineno}."
             )
         self.generic_visit(node)
 
     def visit_list_concat(self, node):
-        if self.depth > 0:
+        if self.depth >= 1:
             self.warnings.append(
                 f"List concatenation with '+' inside loop at line {node.lineno} — use .extend() or += instead, avoids creating a new list each iteration."
             )
-    
-    def visit_exception_handler(self, node):
-        if self.depth >= 1:
-            self.warnings.append(
-                f"try/except inside loop at line {node.lineno} — exception handling overhead on every iteration, move outside if possible."
-            )
+        self.generic_visit(node)
