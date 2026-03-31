@@ -15,17 +15,17 @@ IGNORE_DIRS = {"venv", "node_modules", ".git", "__pycache__", "dist", "build", "
 
 def get_rules(language):
     if language == "python":
-        import languages.python_rules as rules
+        from .languages import python_rules as rules
     elif language == "javascript":
-        import languages.javascript_rules as rules
+        from .languages import javascript_rules as rules
     elif language == "typescript":
-        import languages.typescript_rules as rules
+        from .languages import typescript_rules as rules
     elif language == "go":
-        import languages.go_rules as rules
+        from .languages import go_rules as rules
     elif language == "c":
-        import languages.c_rules as rules
+        from .languages import c_rules as rules
     elif language == "cpp":
-        import languages.cpp_rules as rules
+        from .languages import cpp_rules as rules
     else:
         return None
     return rules
