@@ -198,15 +198,19 @@ def analyse_folder(folder):
     # save report — ask user
     save_report(len(files), languages, all_results, analysis=analysis)
 
-if len(sys.argv) < 2:
-    print("Usage: python main.py <filename or folder>")
-    exit()
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: codewrench <filename or folder>")
+        exit()
 
-target = sys.argv[1]
+    target = sys.argv[1]
 
-if os.path.isdir(target):
-    analyse_folder(target)
-elif os.path.isfile(target):
-    analyse_single_file(target)
-else:
-    handle_error("file_not_found", target, fatal=True)
+    if os.path.isdir(target):
+        analyse_folder(target)
+    elif os.path.isfile(target):
+        analyse_single_file(target)
+    else:
+        handle_error("file_not_found", target, fatal=True)
+
+if __name__ == "__main__":
+    main()
