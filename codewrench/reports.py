@@ -24,6 +24,9 @@ def print_profiling(before_stats, after_stats):
         print(f"  {func:<30} cumtime: {stat['cumtime']}s")
 
 def ask_and_analyse(code, warnings):
+    if not os.getenv("GROQ_API_KEY"):
+        print("\nAI analysis unavailable — add GROQ_API_KEY to .env to enable.")
+        return
     choice = input("\nWant AI analysis? (y/n): ").strip().lower()
     if choice == 'y':
         print("\n--- AI Analysis ---\n")
@@ -31,6 +34,9 @@ def ask_and_analyse(code, warnings):
         print(result)
 
 def ask_and_apply_fixes(code, warnings, filepath):
+    if not os.getenv("GROQ_API_KEY"):
+        print("\nAI analysis unavailable — add GROQ_API_KEY to .env to enable.")
+        return
     choice = input("\nWant to apply fixes to files? (y/n): ").strip().lower()
     if choice == 'y':
         fixed_code = get_fixed_code(code, warnings)

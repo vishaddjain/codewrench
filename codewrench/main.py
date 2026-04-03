@@ -229,12 +229,6 @@ def main():
     
     load_dotenv()
 
-    if not os.getenv("GROQ_API_KEY"):
-        print("No GROQ_API_KEY found.")
-        print("Create a .env file in your current directory with:")
-        print("  GROQ_API_KEY=your_key_here")
-        print("Get a free key at https://console.groq.com")
-        exit(1)
     parser = argparse.ArgumentParser(
         prog="codewrench",
         description="A multi-language code performance analyser."
