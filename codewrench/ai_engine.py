@@ -2,11 +2,9 @@ from groq import Groq
 from dotenv import load_dotenv
 import os
 
-load_dotenv()
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-
 #For single file
 def analyse(code, warnings):
+    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     if not warnings:
         return "No issues found — nothing to analyse."
     
@@ -37,6 +35,7 @@ Be concise and practical.
 
 #For Folder
 def analyse_folder(all_results):
+    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     if not all_results:
         return "No issues found — nothing to analyse."
     
@@ -68,6 +67,7 @@ Be concise and practical. Group your response by file.
 
 #For testing purpose to differentiate the performance
 def get_fixed_code(code, warnings):
+    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     if not warnings:
         return code
     
