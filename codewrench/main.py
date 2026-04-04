@@ -94,7 +94,7 @@ def get_files(folder):
                 files.append(filepath)
     return files
 
-def analyse_single_file(filename):
+def analyse_single_file(filename, args):
     warnings, language, code = run_analysis(filename)
 
     if language is None:
@@ -114,73 +114,107 @@ def analyse_single_file(filename):
     print()
     results = {}
 
-    def run_profiling():
-        try:
-            fixed_code = get_fixed_code(code, warnings)
-            temp_file = write_temp_file(fixed_code, filename)
+    if args.profile:
+        def run_profiling():
+            if args.fix:
+                try:
+                    fixed_code = get_fixed_code(code, warnings)
+                    temp_file = write_temp_file(fixed_code, filename)
 
-            if language == "python":
-                before_raw = profile_file(filename)
-                before_stats = parse_stats(before_raw)
-                after_raw = profile_file(temp_file)
-                after_stats = parse_stats(after_raw)
-                delete_temp_file(temp_file)
-                results["before"] = before_stats
-                results["after"] = after_stats
-                results["profiling_type"] = "cprofile"
+                    if language == "python":
+                        before_raw = profile_file(filename)
+                        before_stats = parse_stats(before_raw)
+                        after_raw = profile_file(temp_file)
+                        after_stats = parse_stats(after_raw)
+                        delete_temp_file(temp_file)
+                        results["before"] = before_stats
+                        results["after"] = after_stats
+                        results["profiling_type"] = "cprofile"
 
-            elif language in ("javascript", "typescript"):
-                before_time = profile_node(filename)
-                after_time = profile_node(temp_file)
-                delete_temp_file(temp_file)
-                results["before_time"] = before_time
-                results["after_time"] = after_time
-                results["profiling_type"] = "time"
+                    elif language in ("javascript", "typescript"):
+                        before_time = profile_node(filename)
+                        after_time = profile_node(temp_file)
+                        delete_temp_file(temp_file)
+                        results["before_time"] = before_time
+                        results["after_time"] = after_time
+                        results["profiling_type"] = "time"
 
-            elif language == "go":
-                before_time = profile_go(filename)
-                after_time = profile_go(temp_file)
-                delete_temp_file(temp_file)
-                results["before_time"] = before_time
-                results["after_time"] = after_time
-                results["profiling_type"] = "time"
+                    elif language == "go":
+                        before_time = profile_go(filename)
+                        after_time = profile_go(temp_file)
+                        delete_temp_file(temp_file)
+                        results["before_time"] = before_time
+                        results["after_time"] = after_time
+                        results["profiling_type"] = "time"
 
+                    else:
+                        results["profiling"] = None
+
+                except Exception:
+                    handle_error("profiling_error", filename)
+                    results["profiling"] = None
             else:
-                results["profiling"] = None
+                try:
+                    if language == "python":
+                        raw = profile_file(filename)
+                        results["stats"] = parse_stats(raw)
+                        results["profiling_type"] = "cprofile_single"
 
-        except Exception:
-            handle_error("profiling_error", filename)
-            results["profiling"] = None
+                    elif language in ("javascript", "typescript"):
+                        time_taken = profile_node(filename)
+                        results["single_time"] = time_taken
+                        results["profiling_type"] = "time_single"
 
-    t = threading.Thread(target=run_profiling)
-    t.start()
-    t.join()
+                    elif language == "go":
+                        time_taken = profile_go(filename)
+                        results["single_time"] = time_taken
+                        results["profiling_type"] = "time_single"
 
-    profiling_type = results.get("profiling_type")
+                    else:
+                        results["profiling"] = None
 
-    if profiling_type == "cprofile":
-        print_profiling(results["before"], results["after"])
-    elif profiling_type == "time":
-        before = results["before_time"]
-        after = results["after_time"]
-        improvement = round((before - after) / before * 100, 1) if before > 0 else 0
-        print("\n--- Performance Profile ---\n")
-        print(f"  Execution time BEFORE fix: {before}s")
-        print(f"  Execution time AFTER fix:  {after}s")
-        print(f"  Improvement: {improvement}% faster")
-    else:
-        print("\n--- Profiling not supported for this language yet ---")
+                except Exception:
+                    handle_error("profiling_error", filename)
+                    results["profiling"] = None
+           
+        t = threading.Thread(target=run_profiling)
+        t.start()
+        t.join()
+
+        profiling_type = results.get("profiling_type")
+
+        if profiling_type == "cprofile":
+            print_profiling(results["before"], results["after"])
+        elif profiling_type == "time":
+            before = results["before_time"]
+            after = results["after_time"]
+            improvement = round((before - after) / before * 100, 1) if before > 0 else 0
+            print("\n--- Performance Profile ---\n")
+            print(f"  Execution time BEFORE fix: {before}s")
+            print(f"  Execution time AFTER fix:  {after}s")
+            print(f"  Improvement: {improvement}% faster")
+        elif profiling_type == "cprofile_single":
+            print_profiling(results["stats"], None)
+
+        elif profiling_type == "time_single":
+            print("\n--- Performance Profile ---\n")
+            print(f"  Execution time: {results['single_time']}s")
+        else:
+            print("\n--- Profiling not supported for this language yet ---")
 
     # AI analysis — ask user
-    ask_and_analyse(code, warnings)
+    if args.analyse:
+        ask_and_analyse(code, warnings)
 
     # apply fixes — ask user
-    ask_and_apply_fixes(code, warnings, filename)
+    if args.fix:
+        ask_and_apply_fixes(code, warnings, filename, no_backup=args.no_backup)
 
     # save report — ask user
-    save_report(1, {language}, {filename: warnings})
+    if args.save_report:
+        save_report(1, {language}, {filename: warnings})
 
-def analyse_folder(folder):
+def analyse_folder(folder, args):
     files = get_files(folder)
 
     if not files:
@@ -213,8 +247,7 @@ def analyse_folder(folder):
 
     # AI analysis — one call for whole folder, ask user
     analysis = None
-    choice = input("\nWant AI analysis? (y/n): ").strip().lower()
-    if choice == 'y':
+    if args.analyse:
         try:
             analysis = analyse_folder_ai(all_results)
             print("\n--- AI Analysis ---\n")
@@ -222,8 +255,14 @@ def analyse_folder(folder):
         except Exception:
             handle_error("api_error", folder)
 
+    if args.fix:
+        for file, file_warnings in all_results.items():
+            _, _, file_code = run_analysis(file)
+            ask_and_apply_fixes(file_code, file_warnings, file, no_backup=args.no_backup)
+         
     # save report — ask user
-    save_report(len(files), languages, all_results, analysis=analysis)
+    if args.save_report:
+        save_report(len(files), languages, all_results, analysis=analysis)
 
 def main():
     
@@ -235,7 +274,12 @@ def main():
     )
     parser.add_argument("target", nargs="?", help="File or folder to analyse")
     parser.add_argument("--revert", metavar="FILE", help="Revert AI fixes from .bak file")
-    
+    parser.add_argument("--analyse", action="store_true", help="Run AI analysis on detected issues")
+    parser.add_argument("--fix", action="store_true", help="Apply AI fixes to files")
+    parser.add_argument("--save-report", action="store_true", help="Save markdown report")
+    parser.add_argument("--no-backup", action="store_true", help="Don't keep .bak backup when applying fixes")
+    parser.add_argument("--profile", action="store_true", help="Run performance profiling on analysed files")
+        
     args = parser.parse_args()
 
 
@@ -244,9 +288,9 @@ def main():
     elif args.target:
         target = args.target
         if os.path.isdir(target):
-            analyse_folder(target)
+            analyse_folder(target, args)
         elif os.path.isfile(target):
-            analyse_single_file(target)
+            analyse_single_file(target, args)
         else:
             handle_error("file_not_found", target, fatal=True)
     else:

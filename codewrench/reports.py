@@ -12,52 +12,46 @@ def print_summary(files_scanned, languages, all_results):
     print(f"Issues Found   : {total_issues} across {len(all_results)} files")
     print("=" * 40)
 
-def print_profiling(before_stats, after_stats):
-    print("Top 5 slowest functions BEFORE fix:")
+def print_profiling(before_stats, after_stats=None):
+    print("\n--- Performance Profile ---\n")
+    print("Top 5 slowest functions:")
     for stat in before_stats[:5]:
         func = stat['function'].split(":")[-1]
         print(f"  {func:<30} cumtime: {stat['cumtime']}s")
 
-    print("\nTop 5 slowest functions AFTER fix:")
-    for stat in after_stats[:5]:
-        func = stat['function'].split(":")[-1]
-        print(f"  {func:<30} cumtime: {stat['cumtime']}s")
+    if after_stats is not None:
+        print("\nTop 5 slowest functions AFTER fix:")
+        for stat in after_stats[:5]:
+            func = stat['function'].split(":")[-1]
+            print(f"  {func:<30} cumtime: {stat['cumtime']}s")
 
 def ask_and_analyse(code, warnings):
     if not os.getenv("GROQ_API_KEY"):
         print("\nAI analysis unavailable — add GROQ_API_KEY to .env to enable.")
         return
-    choice = input("\nWant AI analysis? (y/n): ").strip().lower()
-    if choice == 'y':
-        print("\n--- AI Analysis ---\n")
-        result = analyse(code, warnings)
-        print(result)
+    print("\n--- AI Analysis ---\n")
+    result = analyse(code, warnings)
+    print(result)
 
-def ask_and_apply_fixes(code, warnings, filepath):
+def ask_and_apply_fixes(code, warnings, filepath, no_backup=False):
     if not os.getenv("GROQ_API_KEY"):
         print("\nAI analysis unavailable — add GROQ_API_KEY to .env to enable.")
         return
-    choice = input("\nWant to apply fixes to files? (y/n): ").strip().lower()
-    if choice == 'y':
-        fixed_code = get_fixed_code(code, warnings)
-        with open(filepath + ".bak", "w", encoding="utf8") as f:
-            f.write(code)
-        with open(filepath, "w", encoding="utf8") as f:
-            f.write(fixed_code)
-        print(f"Original saved as {filepath}.bak")
-        print(f"Fixes applied to {filepath}")
-        keep_bak = input("Keep backup file? (y/n): ").strip().lower()
-        if keep_bak == 'n':
-            os.remove(filepath + ".bak")
-            print(f"Backup removed.")
-        else:
-            print(f"Backup kept at {filepath}.bak")
+
+    fixed_code = get_fixed_code(code, warnings)
+    with open(filepath + ".bak", "w", encoding="utf8") as f:
+        f.write(code)
+    with open(filepath, "w", encoding="utf8") as f:
+        f.write(fixed_code)
+    print(f"Original saved as {filepath}.bak")
+    print(f"Fixes applied to {filepath}")
+    if no_backup:
+        os.remove(filepath + ".bak")
+        print("Backup removed.")
+    else:
+        print(f"Backup kept at {filepath}.bak")
 
 def save_report(files_scanned, languages, all_results, analysis=None):
-    choice = input("\nSave report? (y/n): ").strip().lower()
-    if choice != 'y':
-        return
-
     total_issues = sum(len(w) for w in all_results.values())
     
     with open("codewrench_report.md", "w", encoding="utf8") as f:
