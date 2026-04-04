@@ -3,9 +3,10 @@ from .base import BaseDetectors
 class MediumDetectors(BaseDetectors):
 
     SORT_CALLS = {"sort", "sorted", "sort_by", "order_by"}
+    COUNTER_NAMES = {"i", "j", "k", "n", "x", "y", "z", "count", "index", "total", "num", "idx", "cnt"}
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, language):
+        super().__init__(language)
 
     def visit_global_statement(self, node):
         names = node.metadata.get("names", [])
@@ -84,6 +85,10 @@ class MediumDetectors(BaseDetectors):
 
     def visit_list_concat(self, node):
         if self.depth >= 1:
+            var_name = node.metadata.get("var_name", "")
+            if var_name in self.COUNTER_NAMES:
+                self.generic_visit(node)
+                return
             self.warnings.append(
                 f"List concatenation with '+' inside loop at line {node.lineno} — use .extend() or += instead, avoids creating a new list each iteration."
             )

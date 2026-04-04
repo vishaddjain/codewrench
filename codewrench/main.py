@@ -75,7 +75,7 @@ def run_analysis(filepath):
 
     warnings = []
     for DetectorClass in [HighDetectors, MediumDetectors]:
-        detector = DetectorClass()
+        detector = DetectorClass(language)
         detector.visit(ir_tree)
         if hasattr(detector, 'check_attr_counts'):
             detector.check_attr_counts()

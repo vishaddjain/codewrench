@@ -1,10 +1,11 @@
 class BaseDetectors:
-    def __init__(self):
+    def __init__(self, language):
         self.depth = 0
         self.warnings = []
         self.attr_counts = {}
         self.global_vars = set()
         self.function_depth = 0
+        self.language = language
 
     def visit(self, node):
         method = f"visit_{node.node_type}"

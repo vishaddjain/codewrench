@@ -2,9 +2,20 @@ from .base import BaseDetectors
 
 class HighDetectors(BaseDetectors):
     
-    CHEAP_CALLS = {"print", "len", "range", "str", "int", "float", "bool", "type"}
+    CHEAP_CALLS = {
+        "print", "len", "range", "str", "int", "float", "bool", "type",
+        "append", "pop", "keys", "items", "values", "extend", "update",
+        "get", "add", "remove", "copy", "clear", "discard", "isinstance",
+        "getattr", "setattr", "hasattr", "iter", "next", 
+        "reversed", "enumerate", "zip", "map", "filter", "any", "all",
+        "repr", "hash", "id", "callable", "vars", "dir"
+    }   
     EXPENSIVE_CALLS = {"open", "requests", "get", "post", "read", "write", "connect", "execute"}
     UNNECESSARY_OBJECT = {"dict", "list", "tuple", "set", "object"}
+    COUNTER_NAMES = {"i", "j", "k", "n", "x", "y", "z", "count", "index", "total", "num", "idx", "cnt"}
+
+    def __init__(self, language):
+        super().__init__(language)
 
     def visit_loop(self, node):
         self.depth += 1
@@ -38,7 +49,7 @@ class HighDetectors(BaseDetectors):
                 self.warnings.append(
                     f"Creating new object/literal inside loop - causes GC/allocation pressure. Consider moving outside or reusing."
                 )
-            elif name and name not in self.CHEAP_CALLS:
+            elif name and name not in self.CHEAP_CALLS and name.split(".")[-1] not in self.CHEAP_CALLS:
                 self.warnings.append(
                     f"Function call '{name}' inside loop at line {node.lineno} — consider moving it out."
                 )   
@@ -55,13 +66,18 @@ class HighDetectors(BaseDetectors):
         self.generic_visit(node)
     
     def visit_string_concat(self, node):
+        var_name = node.metadata.get("var_name", "")
+        join_hint = "''.join()" if self.language == "python" else "array.join('')"
+        if var_name in self.COUNTER_NAMES:
+            self.generic_visit(node)
+            return
         if self.depth >= 2:
             self.warnings.append(
-                f"String concatenation in nested loop — quadratic complexity at line {node.lineno}, use join() outside the loop"
+                f"String concatenation in nested loop — quadratic complexity at line {node.lineno}, use {join_hint} outside the loop"
             )
         elif self.depth >= 1:
             self.warnings.append(
-                f"String concatenation at line {node.lineno} — use ''.join() instead."
+                f"String concatenation at line {node.lineno} — use {join_hint} instead."
             )
         self.generic_visit(node)
 

@@ -19,15 +19,18 @@ class IRTranslator:
 
     def translate(self, node):
         node_type = self.get_generic_type(node.type)
+        skip_children = False
+        
         if node_type is None:
             list_concat_types = getattr(self.rules, "LIST_CONCAT", [])
             if node.type in list_concat_types:
                 op = node.child_by_field_name("operator")
                 if op and op.text.decode("utf8") == "+":
                     node_type = "list_concat"
+                    skip_children = True
             
         lineno = node.start_point[0] + 1
-        children = [self.translate(child) for child in node.children]
+        children = [] if skip_children else [self.translate(child) for child in node.children]
         metadata = self.extract_metadata(node, node_type)
         return IRNode(node_type or f"_raw_{node.type}", lineno, children, metadata)
     
@@ -44,7 +47,7 @@ class IRTranslator:
             metadata["name"] = node.text.decode("utf8") if node.text else None
         
         elif node_type == "exception_handler":
-                metadata["exception_type"] = self.get_exception_type(node)
+            metadata["exception_type"] = self.get_exception_type(node)
 
         elif node_type == "function_def":
             metadata["mutable_defaults"] = self.get_mutable_defaults(node)
@@ -55,6 +58,10 @@ class IRTranslator:
                 for child in node.children 
                 if child.type == "identifier"
             ]
+        elif node_type in ("string_concat", "list_concat"):
+            left = node.child_by_field_name("left")
+            if left and left.text:
+                metadata["var_name"] = left.text.decode("utf8")
 
         return metadata
 
@@ -86,13 +93,14 @@ class IRTranslator:
 
     def get_mutable_defaults(self, node):
         mutable_lines = []
-        def check_mutable_recursive(n):
-            if n.type in ("list", "dictionary", "set"):
-                mutable_lines.append(n.start_point[0] + 1)
-            for child in n.children:
-                check_mutable_recursive(child)       
+
         for child in node.children:
-            check_mutable_recursive(child)
+            if child.type == "parameters":
+                for param in child.children:
+                    if param.type in ("default_parameter", "typed_default_parameter"):
+                        value = param.child_by_field_name("value")
+                        if value and value.type in ("list", "dictionary", "set"):
+                            mutable_lines.append(value.start_point[0] + 1)
         return mutable_lines
 
     def get_generic_type(self, tree_sitter_type):
