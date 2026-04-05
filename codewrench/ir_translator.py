@@ -10,7 +10,8 @@ GENERIC_TYPES = {
     "GLOBAL_STATEMENT": "global_statement",
     "IMPORT": "import",
     "AWAIT": "await",
-    "IDENTIFIER": "identifier"
+    "IDENTIFIER": "identifier",
+    "GOROUTINE": "goroutine",
 }
 
 class IRTranslator:
@@ -51,6 +52,7 @@ class IRTranslator:
 
         elif node_type == "function_def":
             metadata["mutable_defaults"] = self.get_mutable_defaults(node)
+            metadata["params"] = self.get_param_types(node)
 
         elif node_type == "global_statement":
             metadata["names"] = [
@@ -62,6 +64,9 @@ class IRTranslator:
             left = node.child_by_field_name("left")
             if left and left.text:
                 metadata["var_name"] = left.text.decode("utf8")
+                
+        elif node_type == "loop":
+            metadata["loop_type"] = node.type
 
         return metadata
 
@@ -110,3 +115,16 @@ class IRTranslator:
             if tree_sitter_type in rule_list:
                 return mapped
         return None
+
+    def get_param_types(self, node):
+        params = []
+        for child in node.children:
+            if child.type == "function_declarator":
+                for subchild in child.children:
+                    if subchild.type == "parameter_list":
+                        for param in subchild.children:
+                            if param.type == "parameter_declaration":
+                                type_node = param.child_by_field_name("type")
+                                if type_node and type_node.text:
+                                    params.append(type_node.text.decode("utf8"))
+        return params

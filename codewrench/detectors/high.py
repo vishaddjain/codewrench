@@ -10,6 +10,15 @@ class HighDetectors(BaseDetectors):
         "reversed", "enumerate", "zip", "map", "filter", "any", "all",
         "repr", "hash", "id", "callable", "vars", "dir"
     }   
+    ORM_CALLS = {
+    # Django
+    "filter", "get", "all", "first", "last", "exclude", "count",
+    "aggregate", "annotate", "select_related", "prefetch_related",
+    # SQLAlchemy  
+    "query", "execute", "fetchall", "fetchone", "scalar",
+    # General
+    "find", "find_one", "find_many", "select", "insert", "update", "delete"
+    }
     EXPENSIVE_CALLS = {"open", "requests", "get", "post", "read", "write", "connect", "execute"}
     UNNECESSARY_OBJECT = {"dict", "list", "tuple", "set", "object"}
     COUNTER_NAMES = {"i", "j", "k", "n", "x", "y", "z", "count", "index", "total", "num", "idx", "cnt"}
@@ -48,6 +57,10 @@ class HighDetectors(BaseDetectors):
             elif name and name in self.UNNECESSARY_OBJECT:
                 self.warnings.append(
                     f"Creating new object/literal inside loop - causes GC/allocation pressure. Consider moving outside or reusing."
+                )
+            elif name and name.split(".")[-1] in self.ORM_CALLS:
+                self.warnings.append(
+                    f"Potential N+1 query — '{name}' called inside loop at line {node.lineno} — consider batching queries or using select_related/prefetch_related."
                 )
             elif name and name not in self.CHEAP_CALLS and name.split(".")[-1] not in self.CHEAP_CALLS:
                 self.warnings.append(

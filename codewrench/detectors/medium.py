@@ -4,6 +4,7 @@ class MediumDetectors(BaseDetectors):
 
     SORT_CALLS = {"sort", "sorted", "sort_by", "order_by"}
     COUNTER_NAMES = {"i", "j", "k", "n", "x", "y", "z", "count", "index", "total", "num", "idx", "cnt"}
+    LINEAR_SEARCH_CALLS = {"index", "count"}
 
     def __init__(self, language):
         super().__init__(language)
@@ -23,13 +24,17 @@ class MediumDetectors(BaseDetectors):
                 self.warnings.append(
                     f"Unnecessary sorting {name} inside loops at line {node.lineno}."
                 ) 
+            elif name and name.split(".")[-1] in self.LINEAR_SEARCH_CALLS:
+                self.warnings.append(
+                    f"Linear search — '{name}' called inside loop at line {node.lineno} — list.index() and .count() are O(n), use a dict or set for O(1) lookups."
+                )
 
         if self.depth >= 2:
             if name == "append":
                 self.warnings.append(
                     f"List append inside nested loop at line {node.lineno} — consider restructuring."
                 )
-
+                
         if name == "list":
             children_names = [
                 c.metadata.get("name", "") 

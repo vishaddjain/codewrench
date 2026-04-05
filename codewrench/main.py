@@ -5,6 +5,7 @@ import argparse
 from dotenv import load_dotenv
 from .detectors.high import HighDetectors
 from .detectors.medium import MediumDetectors
+from .detectors.lang_detectors import LanguageDetectors
 from .ai_engine import analyse, get_fixed_code, analyse_folder as analyse_folder_ai
 from .parser_engine import get_parser, detect_language
 from .ir_translator import IRTranslator
@@ -74,7 +75,7 @@ def run_analysis(filepath):
         return [], None, None
 
     warnings = []
-    for DetectorClass in [HighDetectors, MediumDetectors]:
+    for DetectorClass in [HighDetectors, MediumDetectors, LanguageDetectors]:
         detector = DetectorClass(language)
         detector.visit(ir_tree)
         if hasattr(detector, 'check_attr_counts'):
