@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "codewrench"
-version = "0.1.3"
+version = "0.2.0"
 description = "A multi-language code performance analyser with static analysis and AI-powered fix generation."
 readme = "README.md"
 license = { text = "MIT" }

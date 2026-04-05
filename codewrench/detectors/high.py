@@ -12,12 +12,11 @@ class HighDetectors(BaseDetectors):
     }   
     ORM_CALLS = {
     # Django
-    "filter", "get", "all", "first", "last", "exclude", "count",
-    "aggregate", "annotate", "select_related", "prefetch_related",
+    "filter", "first", "last", "exclude", "aggregate", "annotate",
     # SQLAlchemy  
     "query", "execute", "fetchall", "fetchone", "scalar",
     # General
-    "find", "find_one", "find_many", "select", "insert", "update", "delete"
+    "find", "find_one", "find_many", "select", "insert", "delete"
     }
     EXPENSIVE_CALLS = {"open", "requests", "get", "post", "read", "write", "connect", "execute"}
     UNNECESSARY_OBJECT = {"dict", "list", "tuple", "set", "object"}
