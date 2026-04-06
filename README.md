@@ -1,14 +1,15 @@
 # CodeWrench
 
 <p align="center">
-  <img src="assets/codewrench_logo.png" width="200"/>
+  <img src="assets/codewrench_logo.png" width="300"/>
 </p>
 
-
-![PyPI](https://img.shields.io/pypi/v/codewrench)
-![License](https://img.shields.io/github/license/vishaddjain/codewrench)
-![Python](https://img.shields.io/badge/python-3.9+-blue)
-![Built with](https://img.shields.io/badge/Built%20with-Tree--sitter-orange)
+<p align="center">
+  <img src="https://img.shields.io/pypi/v/codewrench"/>
+  <img src="https://img.shields.io/github/license/vishaddjain/codewrench"/>
+  <img src="https://img.shields.io/badge/python-3.9+-blue"/>
+  <img src="https://img.shields.io/badge/Built%20with-Tree--sitter-orange"/>
+</p>
 
 > Point it at your code. Get back what's slow and how to fix it.
 
