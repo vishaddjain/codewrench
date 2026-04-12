@@ -8,7 +8,7 @@ def analyse(code, warnings):
     if not warnings:
         return "No issues found — nothing to analyse."
     
-    warnings_text = "\n".join(f"- {w}" for w in warnings)
+    warnings_text = "\n".join(f"- {w['message']}" for w in warnings)
     
     prompt = f"""
 You are a performance analytics expert.
@@ -41,7 +41,7 @@ def analyse_folder(all_results):
     
     combined = ""
     for filepath, warnings in all_results.items():
-        warnings_text = "\n".join(f"  - {w}" for w in warnings)
+        warnings_text = "\n".join(f"- {w['message']}" for w in warnings)
         combined += f"\nFile: {filepath}\n{warnings_text}\n"
     
     prompt = f"""
@@ -71,7 +71,7 @@ def get_fixed_code(code, warnings):
     if not warnings:
         return code
     
-    warnings_text = "\n".join(f"- {w}" for w in warnings)
+    warnings_text = "\n".join(f"- {w['message']}" for w in warnings)
     
     prompt = f"""
 You are a performance analytics expert.

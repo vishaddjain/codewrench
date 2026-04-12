@@ -13,6 +13,8 @@ from .profilers.profiler import profile_file, profile_node, profile_go, parse_st
 from .errors import handle_error
 from .wrenchignore import load_wrenchignore, is_ignored
 from .reports import print_summary, print_profiling, ask_and_analyse, ask_and_apply_fixes, save_report, revert_file
+from .context import ContextAnalyser
+from .confidence import filter_warnings
 
 IGNORE_DIRS = {"venv", "node_modules", ".git", "__pycache__", "dist", "build", ".vscode"}
 
@@ -33,7 +35,7 @@ def get_rules(language):
         return None
     return rules
 
-def run_analysis(filepath):
+def run_analysis(filepath, show_all=False):
     # wrenchignore check
     patterns = load_wrenchignore(os.path.dirname(filepath))
     if is_ignored(filepath, patterns):
@@ -70,17 +72,23 @@ def run_analysis(filepath):
         tree = parser.parse(bytes(code, "utf8"))
         translator = IRTranslator(rules)
         ir_tree = translator.translate(tree.root_node)
+
+        context = ContextAnalyser(filepath)
+        context.analyse(ir_tree)
+
     except Exception:
         handle_error("syntax_error", filepath)
         return [], None, None
 
     warnings = []
     for DetectorClass in [HighDetectors, MediumDetectors, LanguageDetectors]:
-        detector = DetectorClass(language)
+        detector = DetectorClass(language, context)
         detector.visit(ir_tree)
         if hasattr(detector, 'check_attr_counts'):
             detector.check_attr_counts()
         warnings.extend(detector.warnings)
+
+    warnings = filter_warnings(warnings, context, show_all=show_all)
 
     return warnings, language, code
 
@@ -96,7 +104,7 @@ def get_files(folder):
     return files
 
 def analyse_single_file(filename, args):
-    warnings, language, code = run_analysis(filename)
+    warnings, language, code = run_analysis(filename, show_all=args.all)
 
     if language is None:
         return
@@ -111,7 +119,7 @@ def analyse_single_file(filename, args):
     # print warnings
     print("\n--- Warnings ---\n")
     for w in warnings:
-        print(f"  {w}")
+        print(f"  {w['message']}")
     print()
     results = {}
 
@@ -225,7 +233,7 @@ def analyse_folder(folder, args):
     all_results = {}
     languages = set()
     for file in files:
-        warnings, language, code = run_analysis(file)
+        warnings, language, code = run_analysis(file, show_all=args.all)
         if language:
             languages.add(language)
         if warnings:
@@ -243,7 +251,7 @@ def analyse_folder(folder, args):
     for file, warnings in all_results.items():
         print(f"--- {file} ---")
         for w in warnings:
-            print(f"  {w}")
+            print(f"  {w['message']}")
         print()
 
     # AI analysis — one call for whole folder, ask user
@@ -280,6 +288,7 @@ def main():
     parser.add_argument("--save-report", action="store_true", help="Save markdown report")
     parser.add_argument("--no-backup", action="store_true", help="Don't keep .bak backup when applying fixes")
     parser.add_argument("--profile", action="store_true", help="Run performance profiling on analysed files")
+    parser.add_argument("--all", action="store_true", help="Show all warnings including low confidence")
         
     args = parser.parse_args()
 

@@ -51,6 +51,8 @@ class IRTranslator:
             metadata["exception_type"] = self.get_exception_type(node)
 
         elif node_type == "function_def":
+            name_node = node.child_by_field_name("name")
+            metadata["name"] = name_node.text.decode("utf8") if name_node else None
             metadata["mutable_defaults"] = self.get_mutable_defaults(node)
             metadata["params"] = self.get_param_types(node)
 

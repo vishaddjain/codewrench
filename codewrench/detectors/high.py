@@ -22,15 +22,18 @@ class HighDetectors(BaseDetectors):
     UNNECESSARY_OBJECT = {"dict", "list", "tuple", "set", "object"}
     COUNTER_NAMES = {"i", "j", "k", "n", "x", "y", "z", "count", "index", "total", "num", "idx", "cnt"}
 
-    def __init__(self, language):
-        super().__init__(language)
+    def __init__(self, language, context):
+        super().__init__(language, context)
 
     def visit_loop(self, node):
         self.depth += 1
         if self.depth >= 2 :
-            self.warnings.append(
-                f"Nested loop at line {node.lineno} - potential O(n²)."
-            )
+            self.warnings.append({
+                "message": f"Nested loop at line {node.lineno} - potential O(n²).",
+                "line": node.lineno,
+                "confidence": "high",
+                "function": self.current_function
+            })
         self.generic_visit(node)
         self.depth -= 1
     
@@ -38,33 +41,54 @@ class HighDetectors(BaseDetectors):
         if self.depth >= 1:
             name = node.metadata.get("name", None)
             if name and name == "re.compile":
-                self.warnings.append(
-                    f"re.compile() inside loop at line {node.lineno} — move it outside the loop, compile once and reuse."
-                )
+                self.warnings.append({
+                    "message": f"re.compile() inside loop at line {node.lineno} — move it outside the loop, compile once and reuse.",
+                    "line": node.lineno,
+                    "confidence": "high",
+                    "function": self.current_function
+                })
             elif name and name in ["print", "logging.info", "logging.warning", "logging.error", "console.log"]:
-                self.warnings.append(
-                    f"print()/logging call inside loop at line {node.lineno} — I/O on every iteration, move outside or use buffered logging."
-                )
+                self.warnings.append({
+                    "message": f"print()/logging call inside loop at line {node.lineno} — I/O on every iteration, move outside or use buffered logging.",
+                    "line": node.lineno,
+                    "confidence": "medium",
+                    "function": self.current_function
+                })
             elif name and name == "len":
-                self.warnings.append(
-                    f"len() called inside loop at line {node.lineno} — cache the result before the loop to avoid repeated calls."
-                )
+                self.warnings.append({
+                    "message": f"len() called inside loop at line {node.lineno} — cache the result before the loop to avoid repeated calls.",
+                    "line": node.lineno,
+                    "confidence": "high",
+                    "function": self.current_function
+                })
             elif name and name in self.EXPENSIVE_CALLS:
-                self.warnings.append(
-                    f"I/O call {name} inside loop at line {node.lineno} - consider moving/removing it out."
-                )
+                self.warnings.append({
+                    "message": f"I/O call {name} inside loop at line {node.lineno} - consider moving/removing it out.",
+                    "line": node.lineno,
+                    "confidence": "high",
+                    "function": self.current_function
+                })
             elif name and name in self.UNNECESSARY_OBJECT:
-                self.warnings.append(
-                    f"Creating new object/literal inside loop - causes GC/allocation pressure. Consider moving outside or reusing."
-                )
+                self.warnings.append({
+                    "message": f"Creating new object/literal inside loop - causes GC/allocation pressure. Consider moving outside or reusing.",
+                    "line": node.lineno,
+                    "confidence": "medium",
+                    "function": self.current_function
+                })
             elif name and name.split(".")[-1] in self.ORM_CALLS:
-                self.warnings.append(
-                    f"Potential N+1 query — '{name}' called inside loop at line {node.lineno} — consider batching queries or using select_related/prefetch_related."
-                )
+                self.warnings.append({
+                    "message": f"Potential N+1 query — '{name}' called inside loop at line {node.lineno} — consider batching queries or using select_related/prefetch_related.",
+                    "line": node.lineno,
+                    "confidence": "medium",
+                    "function": self.current_function
+                })
             elif name and name not in self.CHEAP_CALLS and name.split(".")[-1] not in self.CHEAP_CALLS:
-                self.warnings.append(
-                    f"Function call '{name}' inside loop at line {node.lineno} — consider moving it out."
-                )   
+                self.warnings.append({
+                    "message": f"Function call '{name}' inside loop at line {node.lineno} — consider moving it out.",
+                    "line": node.lineno,
+                    "confidence": "low",
+                    "function": self.current_function
+                })   
 
         self.generic_visit(node)
 
@@ -84,23 +108,35 @@ class HighDetectors(BaseDetectors):
             self.generic_visit(node)
             return
         if self.depth >= 2:
-            self.warnings.append(
-                f"String concatenation in nested loop — quadratic complexity at line {node.lineno}, use {join_hint} outside the loop"
-            )
+            self.warnings.append({
+                "message": f"String concatenation in nested loop — quadratic complexity at line {node.lineno}, use {join_hint} outside the loop",
+                "line": node.lineno,
+                "confidence": "high",
+                "function": self.current_function
+            })
         elif self.depth >= 1:
-            self.warnings.append(
-                f"String concatenation at line {node.lineno} — use {join_hint} instead."
-            )
+            self.warnings.append({
+                "message": f"String concatenation at line {node.lineno} — use {join_hint} instead.",
+                "line": node.lineno,
+                "confidence": "high",
+                "function": self.current_function
+            })
         self.generic_visit(node)
 
     def check_attr_counts(self):
         for key, lines in self.attr_counts.items():
             if len(lines) >= 2:
-                self.warnings.append(
-                    f"Attribute '{key}' accessed {len(lines)} times in loop at lines {lines} — cache it."
-                )
+                self.warnings.append({
+                    "message": f"Attribute '{key}' accessed {len(lines)} times in loop at lines {lines} — cache it.",
+                    "line": lines[0],
+                    "confidence": "high",
+                    "function": self.current_function
+                })
     def visit_await(self, node):
         if self.depth >= 1:
-            self.warnings.append(
-                f"await inside loop at line {node.lineno} — sequential async calls, use asyncio.gather() or Promise.all() to run concurrently."
-            )
+            self.warnings.append({
+                "message" : f"await inside loop at line {node.lineno} — sequential async calls, use asyncio.gather() or Promise.all() to run concurrently.",
+                "line": node.lineno,
+                "confidence": "high",
+                "function": self.current_function
+            })

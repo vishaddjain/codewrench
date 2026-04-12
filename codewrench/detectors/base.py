@@ -1,11 +1,13 @@
 class BaseDetectors:
-    def __init__(self, language):
+    def __init__(self, language, context):
         self.depth = 0
         self.warnings = []
         self.attr_counts = {}
         self.global_vars = set()
         self.function_depth = 0
         self.language = language
+        self.current_function = None 
+        self.context = context
 
     def visit(self, node):
         method = f"visit_{node.node_type}"
@@ -24,9 +26,12 @@ class BaseDetectors:
     def visit_function_def(self, node):
         self.function_depth += 1
         original_depth = self.depth
+        previous_function = self.current_function
+        self.current_function = node.metadata.get("name", None)
         self.depth = 0
         self.generic_visit(node)
         self.depth = original_depth
+        self.current_function = previous_function
         self.function_depth -= 1
 
     def visit_global_statement(self, node):

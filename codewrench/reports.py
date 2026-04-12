@@ -67,7 +67,7 @@ def save_report(files_scanned, languages, all_results, analysis=None):
         for filepath, warnings in all_results.items():
             f.write(f"### {filepath}\n\n")
             for w in warnings:
-                f.write(f"- {w}\n")
+                f.write(f"- {w['message']}\n")
             f.write("\n")
 
         # AI analysis
