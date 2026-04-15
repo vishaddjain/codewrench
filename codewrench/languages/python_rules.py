@@ -1,4 +1,4 @@
-LOOP_TYPES = ["for_statement", "while_statement"]
+LOOP_TYPES = ["for_statement", "while_statement", "list_comprehension", "dictionary_comprehension", "set_comprehension", "generator_expression"]
 FUNCTION_CALL = ["call"]
 FUNCTION_DEF = ["function_definition"]
 ATTRIBUTE_ACCESS = ["attribute"]

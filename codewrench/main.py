@@ -65,6 +65,32 @@ def run_analysis(filepath, show_all=False):
         handle_error("empty_file", filepath)
         return [], None, None
 
+    # wrench :ignore check
+    def get_ignored_ranges(code, ir_tree):
+        ignored_lines = set()
+        for lineno, line in enumerate(code.splitlines(), start=1):
+            if "wrench:ignore" in line:
+                ignored_lines.add(lineno)
+        
+        ranges = []
+        
+        def walk(node):
+            if node.node_type in ("loop", "function_def"):
+                start = node.lineno
+                end = node.metadata.get("end_lineno", start)
+                if start in ignored_lines:
+                    ranges.append((start, end))
+            for child in node.children:
+                walk(child)
+        
+        walk(ir_tree)
+        
+        for lineno in ignored_lines:
+            if not any(start <= lineno <= end for start, end in ranges):
+                ranges.append((lineno, lineno))
+        
+        return ranges
+
     # parsing
     try:
         rules = get_rules(language)
@@ -87,7 +113,12 @@ def run_analysis(filepath, show_all=False):
         if hasattr(detector, 'check_attr_counts'):
             detector.check_attr_counts()
         warnings.extend(detector.warnings)
-
+    
+    ignored_ranges = get_ignored_ranges(code, ir_tree)
+    warnings = [
+        w for w in warnings
+        if not any(start <= w["line"] <= end for start, end in ignored_ranges)
+    ]
     warnings = filter_warnings(warnings, context, show_all=show_all)
 
     return warnings, language, code

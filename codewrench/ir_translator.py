@@ -55,6 +55,7 @@ class IRTranslator:
             metadata["name"] = name_node.text.decode("utf8") if name_node else None
             metadata["mutable_defaults"] = self.get_mutable_defaults(node)
             metadata["params"] = self.get_param_types(node)
+            metadata["end_lineno"] = node.end_point[0] + 1
 
         elif node_type == "global_statement":
             metadata["names"] = [
@@ -69,6 +70,7 @@ class IRTranslator:
                 
         elif node_type == "loop":
             metadata["loop_type"] = node.type
+            metadata["end_lineno"] = node.end_point[0] + 1
 
         return metadata
 

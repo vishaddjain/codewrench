@@ -20,7 +20,7 @@ class HighDetectors(BaseDetectors):
     }
     EXPENSIVE_CALLS = {"open", "requests", "get", "post", "read", "write", "connect", "execute"}
     UNNECESSARY_OBJECT = {"dict", "list", "tuple", "set", "object"}
-    COUNTER_NAMES = {"i", "j", "k", "n", "x", "y", "z", "count", "index", "total", "num", "idx", "cnt"}
+    COUNTER_NAMES = {"i", "j", "k", "n", "x", "y", "z", "count", "counter", "index", "total", "num", "idx", "cnt"}
 
     def __init__(self, language, context):
         super().__init__(language, context)
@@ -38,8 +38,8 @@ class HighDetectors(BaseDetectors):
         self.depth -= 1
     
     def visit_function_call(self, node):
+        name = node.metadata.get("name", None)
         if self.depth >= 1:
-            name = node.metadata.get("name", None)
             if name and name == "re.compile":
                 self.warnings.append({
                     "message": f"re.compile() inside loop at line {node.lineno} — move it outside the loop, compile once and reuse.",
@@ -61,7 +61,7 @@ class HighDetectors(BaseDetectors):
                     "confidence": "high",
                     "function": self.current_function
                 })
-            elif name and name in self.EXPENSIVE_CALLS:
+            elif name and (name in self.EXPENSIVE_CALLS or name.split(".")[-1] in self.EXPENSIVE_CALLS):
                 self.warnings.append({
                     "message": f"I/O call {name} inside loop at line {node.lineno} - consider moving/removing it out.",
                     "line": node.lineno,
@@ -82,13 +82,14 @@ class HighDetectors(BaseDetectors):
                     "confidence": "medium",
                     "function": self.current_function
                 })
-            elif name and name not in self.CHEAP_CALLS and name.split(".")[-1] not in self.CHEAP_CALLS:
+        if name and name not in self.CHEAP_CALLS and name.split(".")[-1] not in self.CHEAP_CALLS:
+            if self.depth >= 1:
                 self.warnings.append({
                     "message": f"Function call '{name}' inside loop at line {node.lineno} — consider moving it out.",
                     "line": node.lineno,
                     "confidence": "low",
                     "function": self.current_function
-                })   
+                })
 
         self.generic_visit(node)
 
@@ -125,7 +126,7 @@ class HighDetectors(BaseDetectors):
 
     def check_attr_counts(self):
         for key, lines in self.attr_counts.items():
-            if len(lines) >= 2:
+            if len(lines) >= 3:
                 self.warnings.append({
                     "message": f"Attribute '{key}' accessed {len(lines)} times in loop at lines {lines} — cache it.",
                     "line": lines[0],

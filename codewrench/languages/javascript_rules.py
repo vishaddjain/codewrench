@@ -1,4 +1,4 @@
-LOOP_TYPES = ["for_statement", "for_in_statement", "for_of_statement", "while_statement"]
+LOOP_TYPES = ["for_statement", "while_statement", "do_statement", "for_in_statement", "array_comprehension"]
 FUNCTION_CALL = ["call_expression"]
 FUNCTION_DEF = ["function_declaration", "arrow_function", "function_expression"]
 ATTRIBUTE_ACCESS = ["member_expression"]
