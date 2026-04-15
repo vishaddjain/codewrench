@@ -35,6 +35,17 @@ def get_rules(language):
         return None
     return rules
 
+def dedupe_warnings(warnings):
+    seen = set()
+    deduped = []
+    for warning in warnings:
+        key = (warning["line"], warning["message"], warning.get("function"))
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(warning)
+    return deduped
+
 def run_analysis(filepath, show_all=False):
     # wrenchignore check
     patterns = load_wrenchignore(os.path.dirname(filepath))
@@ -119,6 +130,7 @@ def run_analysis(filepath, show_all=False):
         w for w in warnings
         if not any(start <= w["line"] <= end for start, end in ignored_ranges)
     ]
+    warnings = dedupe_warnings(warnings)
     warnings = filter_warnings(warnings, context, show_all=show_all)
 
     return warnings, language, code

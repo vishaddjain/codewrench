@@ -21,6 +21,11 @@ class HighDetectors(BaseDetectors):
     EXPENSIVE_CALLS = {"open", "requests", "get", "post", "read", "write", "connect", "execute"}
     UNNECESSARY_OBJECT = {"dict", "list", "tuple", "set", "object"}
     COUNTER_NAMES = {"i", "j", "k", "n", "x", "y", "z", "count", "counter", "index", "total", "num", "idx", "cnt"}
+    ATTR_SKIP_PREFIXES = ("self.assert", "assert", "self.subTest")
+    ATTR_SKIP_EXACT = {
+        "assert", "date", "pk", "id", "count", "order_by", "get", "filter",
+        "aggregate", "annotate", "create", "widget", "join"
+    }
 
     def __init__(self, language, context):
         super().__init__(language, context)
@@ -126,13 +131,42 @@ class HighDetectors(BaseDetectors):
 
     def check_attr_counts(self):
         for key, lines in self.attr_counts.items():
-            if len(lines) >= 3:
+            unique_lines = sorted(set(lines))
+            if self.should_skip_attr_warning(key):
+                continue
+
+            threshold = 5 if self.context.is_test_file else 3
+            if len(unique_lines) >= threshold:
                 self.warnings.append({
-                    "message": f"Attribute '{key}' accessed {len(lines)} times in loop at lines {lines} — cache it.",
-                    "line": lines[0],
+                    "message": f"Attribute '{key}' accessed {len(unique_lines)} times in loop at lines {unique_lines} — cache it.",
+                    "line": unique_lines[0],
                     "confidence": "high",
                     "function": self.current_function
                 })
+
+    def should_skip_attr_warning(self, key):
+        if not key:
+            return True
+
+        if key.startswith(self.ATTR_SKIP_PREFIXES):
+            return True
+
+        if key in self.ATTR_SKIP_EXACT:
+            return True
+
+        last_part = key.split(".")[-1]
+        if last_part in self.ATTR_SKIP_EXACT:
+            return True
+
+        if self.context.is_test_file and (
+            key.endswith(".objects") or
+            key.startswith("self.") or
+            ".objects." in key
+        ):
+            return True
+
+        return False
+
     def visit_await(self, node):
         if self.depth >= 1:
             self.warnings.append({

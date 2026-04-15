@@ -15,7 +15,12 @@ class ContextAnalyser:
         self._call_counts = {}
 
     def _check_test_file(self):
-        base = os.path.basename(self.filename).lower()
+        normalized = os.path.normpath(self.filename).lower()
+        parts = normalized.split(os.sep)
+        if "tests" in parts or "js_tests" in parts or "__tests__" in parts:
+            return True
+
+        base = os.path.basename(normalized)
         name, ext = os.path.splitext(base)
         return (
             name.startswith("test_") or
@@ -60,5 +65,4 @@ class ContextAnalyser:
         return self.function_contexts.get(function_name, {
             "is_cold": False, "is_hot": False, "call_count": -1
         })    
-
 

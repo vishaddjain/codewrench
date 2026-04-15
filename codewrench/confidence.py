@@ -1,8 +1,32 @@
+TEST_FILE_SUPPRESS_PREFIXES = (
+    "Attribute '",
+)
+
+TEST_FILE_STRONG_DOWNGRADE_PREFIXES = (
+    "Potential N+1 query",
+    "I/O call ",
+    "Linear search",
+    "Import is at function level",
+)
+
+
 def score_warning(warning, file_context, function_contexts):
     confidence = warning["confidence"]
     function = warning["function"]
+    message = warning["message"]
 
     if file_context:
+        if message.startswith(TEST_FILE_SUPPRESS_PREFIXES):
+            return None
+
+        if message.startswith(TEST_FILE_STRONG_DOWNGRADE_PREFIXES):
+            if confidence == "high":
+                confidence = "low"
+            elif confidence == "medium":
+                return None
+            elif confidence == "low":
+                return None
+
         if confidence == "medium":
             confidence = "low"
         elif confidence == "low":
