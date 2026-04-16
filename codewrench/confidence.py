@@ -1,5 +1,6 @@
 TEST_FILE_SUPPRESS_PREFIXES = (
     "Attribute '",
+     "List concatenation with '+'",
 )
 
 TEST_FILE_STRONG_DOWNGRADE_PREFIXES = (
@@ -7,6 +8,8 @@ TEST_FILE_STRONG_DOWNGRADE_PREFIXES = (
     "I/O call ",
     "Linear search",
     "Import is at function level",
+     "List concatenation with '+'",
+     "Nested loop",
 )
 
 
