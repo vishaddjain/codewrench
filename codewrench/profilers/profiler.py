@@ -10,6 +10,8 @@ def profile_file(filename):
         text= True,
         cwd=os.path.dirname(os.path.abspath(filename))
     )
+    if result.returncode != 0:
+        raise Exception(f"Python error: {result.stderr}")
     return result.stdout
 
 def parse_stats(raw_output):

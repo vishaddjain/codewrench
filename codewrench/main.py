@@ -3,6 +3,14 @@ import os
 import threading
 import argparse
 from dotenv import load_dotenv
+from .languages import (
+    python_rules,
+    javascript_rules,
+    typescript_rules,
+    go_rules,
+    c_rules,
+    cpp_rules,
+)
 from .detectors.high import HighDetectors
 from .detectors.medium import MediumDetectors
 from .detectors.lang_detectors import LanguageDetectors
@@ -17,23 +25,17 @@ from .context import ContextAnalyser
 from .confidence import filter_warnings
 
 IGNORE_DIRS = {"venv", "node_modules", ".git", "__pycache__", "dist", "build", ".vscode"}
+RULES_BY_LANGUAGE = {
+    "python": python_rules,
+    "javascript": javascript_rules,
+    "typescript": typescript_rules,
+    "go": go_rules,
+    "c": c_rules,
+    "cpp": cpp_rules,
+}
 
 def get_rules(language):
-    if language == "python":
-        from .languages import python_rules as rules
-    elif language == "javascript":
-        from .languages import javascript_rules as rules
-    elif language == "typescript":
-        from .languages import typescript_rules as rules
-    elif language == "go":
-        from .languages import go_rules as rules
-    elif language == "c":
-        from .languages import c_rules as rules
-    elif language == "cpp":
-        from .languages import cpp_rules as rules
-    else:
-        return None
-    return rules
+    return RULES_BY_LANGUAGE.get(language)
 
 def dedupe_warnings(warnings):
     seen = set()
@@ -152,18 +154,18 @@ def analyse_single_file(filename, args):
     if language is None:
         return
 
-    if not warnings:
+    has_warnings = bool(warnings)
+
+    if has_warnings:
+        print_summary(1, {language}, {filename: warnings})
+
+        print("\n--- Warnings ---\n")
+        for w in warnings:
+            print(f"  {w['message']}")
+        print()
+    else:
         print("No issues found!")
-        return
 
-    # print summary
-    print_summary(1, {language}, {filename: warnings})
-
-    # print warnings
-    print("\n--- Warnings ---\n")
-    for w in warnings:
-        print(f"  {w['message']}")
-    print()
     results = {}
 
     if args.profile:
@@ -204,7 +206,7 @@ def analyse_single_file(filename, args):
 
                 except Exception:
                     handle_error("profiling_error", filename)
-                    results["profiling"] = None
+                    results["profiling_type"] = "failed"
             else:
                 try:
                     if language == "python":
@@ -227,7 +229,7 @@ def analyse_single_file(filename, args):
 
                 except Exception:
                     handle_error("profiling_error", filename)
-                    results["profiling"] = None
+                    results["profiling_type"] = "failed"
            
         t = threading.Thread(target=run_profiling)
         t.start()
@@ -251,20 +253,22 @@ def analyse_single_file(filename, args):
         elif profiling_type == "time_single":
             print("\n--- Performance Profile ---\n")
             print(f"  Execution time: {results['single_time']}s")
+        elif profiling_type == "failed":
+            pass
         else:
             print("\n--- Profiling not supported for this language yet ---")
 
     # AI analysis — ask user
-    if args.analyse:
+    if args.analyse and warnings:
         ask_and_analyse(code, warnings)
 
     # apply fixes — ask user
-    if args.fix:
+    if args.fix and warnings:
         ask_and_apply_fixes(code, warnings, filename, no_backup=args.no_backup)
 
     # save report — ask user
     if args.save_report:
-        save_report(1, {language}, {filename: warnings})
+        save_report(1, {language}, {filename: warnings} if warnings else {})
 
 def analyse_folder(folder, args):
     files = get_files(folder)
@@ -282,24 +286,21 @@ def analyse_folder(folder, args):
         if warnings:
             all_results[file] = warnings
 
-    if not all_results:
+    if all_results:
+        print_summary(len(files), languages, all_results)
+
+        print("\n--- Warnings ---\n")
+        for file, warnings in all_results.items():
+            print(f"--- {file} ---")
+            for w in warnings:
+                print(f"  {w['message']}")
+            print()
+    else:
         print("No issues found across all files!")
-        return
-
-    # print summary
-    print_summary(len(files), languages, all_results)
-
-    # print warnings per file
-    print("\n--- Warnings ---\n")
-    for file, warnings in all_results.items():
-        print(f"--- {file} ---")
-        for w in warnings:
-            print(f"  {w['message']}")
-        print()
 
     # AI analysis — one call for whole folder, ask user
     analysis = None
-    if args.analyse:
+    if args.analyse and all_results:
         try:
             analysis = analyse_folder_ai(all_results)
             print("\n--- AI Analysis ---\n")
@@ -307,7 +308,7 @@ def analyse_folder(folder, args):
         except Exception:
             handle_error("api_error", folder)
 
-    if args.fix:
+    if args.fix and all_results:
         for file, file_warnings in all_results.items():
             _, _, file_code = run_analysis(file)
             ask_and_apply_fixes(file_code, file_warnings, file, no_backup=args.no_backup)

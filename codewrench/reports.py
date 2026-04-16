@@ -134,6 +134,9 @@ def save_report(files_scanned, languages, all_results, analysis=None):
                 )
             f.write("\n")
 
+        if not all_results:
+            f.write("No issues found in the scanned target.\n\n")
+
         f.write("---\n\n")
 
         write_confidence_section(f, "High Confidence", "high", all_results)

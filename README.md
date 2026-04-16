@@ -7,7 +7,7 @@
 <p align="center">
   <img src="https://img.shields.io/pypi/v/codewrench"/>
   <img src="https://img.shields.io/github/license/vishaddjain/codewrench"/>
-  <img src="https://img.shields.io/badge/python-3.9+-blue"/>
+  <img src="https://img.shields.io/badge/python-3.10+-blue"/>
   <img src="https://img.shields.io/badge/Built%20with-Tree--sitter-orange"/>
 </p>
 
@@ -181,6 +181,18 @@ legacy_code.py
 
 Works like `.gitignore` — supports wildcards and directory patterns.
 
+## Inline ignores
+
+If you want to suppress a specific warning in code, add `wrench:ignore` on the relevant line.
+
+```python
+for item in items:  # wrench:ignore
+    process(item)
+```
+
+If `wrench:ignore` is placed on a loop or function definition line, CodeWrench ignores warnings for that whole block.
+If it's placed on any other line, only that line is ignored.
+
 ---
 
 ## How it works
@@ -245,7 +257,7 @@ codewrench/
 ├── ir_translator.py      ← Tree-sitter → IR translation
 ├── parser_engine.py      ← language detection + parser setup
 ├── ai_engine.py          ← Groq integration
-├── report.py             ← terminal + markdown output
+├── reports.py            ← terminal + markdown output
 ├── errors.py             ← error handling
 ├── wrenchignore.py       ← .wrenchignore support
 └── main.py               ← entry point, CLI, orchestration

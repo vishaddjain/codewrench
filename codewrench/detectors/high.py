@@ -18,13 +18,18 @@ class HighDetectors(BaseDetectors):
     # General
     "find", "find_one", "find_many", "select", "insert", "delete"
     }
-    EXPENSIVE_CALLS = {"open", "requests", "get", "post", "read", "write", "connect", "execute"}
+    EXPENSIVE_CALLS = {"open", "requests.get", "requests.post", "requests.put", "requests.delete", "requests.patch"}
+    EXPENSIVE_SUFFIXES = {"read", "write", "connect", "execute", "fetchall", "fetchone"}
     UNNECESSARY_OBJECT = {"dict", "list", "tuple", "set", "object"}
     COUNTER_NAMES = {"i", "j", "k", "n", "x", "y", "z", "count", "counter", "index", "total", "num", "idx", "cnt"}
     ATTR_SKIP_PREFIXES = ("self.assert", "assert", "self.subTest")
     ATTR_SKIP_EXACT = {
         "assert", "date", "pk", "id", "count", "order_by", "get", "filter",
         "aggregate", "annotate", "create", "widget", "join"
+    }
+    REPORTING_FUNCTION_HINTS = {
+        "print", "print_summary", "print_profiling", "save_report",
+        "analyse_single_file", "analyse_folder"
     }
 
     def __init__(self, language, context):
@@ -53,6 +58,9 @@ class HighDetectors(BaseDetectors):
                     "function": self.current_function
                 })
             elif name and name in ["print", "logging.info", "logging.warning", "logging.error", "console.log"]:
+                if self.current_function in self.REPORTING_FUNCTION_HINTS:
+                    self.generic_visit(node)
+                    return
                 self.warnings.append({
                     "message": f"print()/logging call inside loop at line {node.lineno} — I/O on every iteration, move outside or use buffered logging.",
                     "line": node.lineno,
@@ -66,7 +74,7 @@ class HighDetectors(BaseDetectors):
                     "confidence": "high",
                     "function": self.current_function
                 })
-            elif name and (name in self.EXPENSIVE_CALLS or name.split(".")[-1] in self.EXPENSIVE_CALLS):
+            elif name and (name in self.EXPENSIVE_CALLS or name.split(".")[-1] in self.EXPENSIVE_SUFFIXES):
                 self.warnings.append({
                     "message": f"I/O call {name} inside loop at line {node.lineno} - consider moving/removing it out.",
                     "line": node.lineno,
