@@ -56,7 +56,8 @@ codewrench <file> --profile            # + profile original file
 codewrench <file> --profile --fix      # + profile before/after AI fix
 codewrench <file> --analyse            # + AI explanation of issues
 codewrench <file> --fix                # + apply AI fixes to file
-codewrench <file> --save-report        # + save codewrench_report.md
+codewrench <file_or_folder> --save-report # + save a grouped markdown report
+codewrench <file_or_folder> --all      # include low confidence warnings too
 codewrench <file> --no-backup          # don't keep .bak when fixing
 codewrench --revert <file>             # restore from .bak backup
 ```
@@ -65,35 +66,57 @@ codewrench --revert <file>             # restore from .bak backup
 
 ```
 ========================================
-         CODEWRENCH REPORT
+           CODEWRENCH REPORT
 ========================================
 Files Scanned  : 1
 Languages      : python
-Issues Found   : 8 across 1 files
+Issues Found   : 4 across 1 files
 ========================================
 
 --- Warnings ---
-  Nested loop at line 19 — potential O(n²)
-  String concatenation at line 22 — use ''.join() instead
-  re.compile() inside loop at line 31 — move it outside, compile once and reuse
-  Potential N+1 query — 'User.objects.filter' called inside loop at line 45
 
---- Performance Profile ---
-
-Top 5 slowest functions BEFORE fix:
-  process_data                   cumtime: 2.341s
-  build_string                   cumtime: 0.812s
-
-Top 5 slowest functions AFTER fix:
-  process_data                   cumtime: 0.421s
-  build_string                   cumtime: 0.109s
-
---- AI Analysis ---
-
-1. Nested loop at line 19
-   Problem: Two nested loops over the same data gives you O(n²) complexity.
-   For 1000 items that's 1,000,000 iterations instead of 1,000.
+  Nested loop at line 19 - potential O(n²).
+  String concatenation at line 22 — use ''.join() instead.
+  re.compile() inside loop at line 31 — move it outside the loop, compile once and reuse.
+  Potential N+1 query — 'User.objects.filter' called inside loop at line 45 — consider batching queries or using select_related/prefetch_related.
 ```
+
+### Saved report
+
+`--save-report` generates `codewrench_report.md` with:
+
+- a summary section at the top
+- confidence breakdown for high, medium, and low findings
+- top issue types and most affected files
+- findings grouped into high, medium, and low confidence sections
+
+Example saved report layout:
+
+```md
+# Codewrench Report
+
+## Summary
+
+- Files scanned: 12
+- Files with issues: 4
+- Total issues: 8
+- Languages: python
+
+### Confidence Breakdown
+
+- 🔴 High: 3
+- 🟡 Medium: 3
+- 🟢 Low: 2
+
+## High Confidence
+
+### app/services.py (2 issues)
+
+- Line 19: Nested loop at line 19 - potential O(n²).
+- Line 31: re.compile() inside loop at line 31 — move it outside the loop, compile once and reuse.
+```
+
+Use `--all` if you want the report to include low confidence warnings as well.
 
 ---
 
