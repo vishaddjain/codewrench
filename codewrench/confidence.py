@@ -12,13 +12,41 @@ TEST_FILE_STRONG_DOWNGRADE_PREFIXES = (
      "Nested loop",
 )
 
+SUPPORT_FILE_SUPPRESS_PREFIXES = (
+    "Import is at function level",
+    "print()/logging call inside loop",
+)
 
-def score_warning(warning, file_context, function_contexts):
+SUPPORT_FILE_STRONG_DOWNGRADE_PREFIXES = (
+    "Bare except",
+    "Overly broad 'except Exception'",
+)
+
+def score_warning(warning, context):
     confidence = warning["confidence"]
     function = warning["function"]
     message = warning["message"]
 
-    if file_context:
+    if context.is_tutorial_file:
+        return None
+
+    if context.is_script_file or context.is_tutorial_file:
+        if message.startswith(SUPPORT_FILE_STRONG_DOWNGRADE_PREFIXES):
+            if confidence == "high":
+                confidence = "low"
+            elif confidence == "medium":
+                return None
+            elif confidence == "low":
+                return None
+
+        if confidence == "high":
+            confidence = "medium"
+        elif confidence == "medium":
+            confidence = "low"
+        elif confidence == "low":
+            return None
+
+    if context.is_test_file:
         if message.startswith(TEST_FILE_SUPPRESS_PREFIXES):
             return None
 
@@ -35,7 +63,7 @@ def score_warning(warning, file_context, function_contexts):
         elif confidence == "low":
             return None  
 
-    ctx = function_contexts.get(function, None) if function else None
+    ctx = context.function_contexts.get(function, None) if function else None
 
     if ctx:
         if ctx["is_cold"]:
@@ -64,7 +92,7 @@ def filter_warnings(warnings, context, show_all=False):
 
     scored = []
     for w in warnings:
-        result = score_warning(w, context.is_test_file, context.function_contexts)
+        result = score_warning(w, context)
         if result is not None:
             scored.append(result)
         

@@ -192,6 +192,7 @@ for item in items:  # wrench:ignore
 
 If `wrench:ignore` is placed on a loop or function definition line, CodeWrench ignores warnings for that whole block.
 If it's placed on any other line, only that line is ignored.
+Use # wrench: ignore to suppress false positives.
 
 ---
 

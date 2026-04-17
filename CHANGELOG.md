@@ -4,6 +4,21 @@ All notable changes to codewrench will be documented here.
 
 ---
 
+## [1.0.1] — 2026-04-17
+
+### Fixed
+- Repo-level scans now skip `tests/`, `scripts/`, and docs/tutorial folders by default
+- `--all` now restores those folders so full scans are still available when explicitly requested
+- Reduced report inflation from support-code paths such as scripts and tutorial examples
+
+### Improved
+- Bare `except` warnings are less dominant in default output
+- `except Exception` and function-level imports are now treated as lower-confidence advisory signals
+- Scripts and support-code paths are scored more conservatively to keep default reports focused on core application code
+- Default repo scans now produce cleaner numbers on real-world projects like FastAPI, Flask, and Requests
+
+---
+
 ## [1.0.0] — 2026-04-16
 
 ### Added

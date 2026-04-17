@@ -25,6 +25,11 @@ from .context import ContextAnalyser
 from .confidence import filter_warnings
 
 IGNORE_DIRS = {"venv", "node_modules", ".git", "__pycache__", "dist", "build", ".vscode"}
+DEFAULT_SKIP_DIRS = {
+    "tests", "js_tests", "__tests__",
+    "scripts", "script",
+    "docs", "docs_src", "examples", "example", "tutorial", "tutorials",
+}
 RULES_BY_LANGUAGE = {
     "python": python_rules,
     "javascript": javascript_rules,
@@ -137,11 +142,14 @@ def run_analysis(filepath, show_all=False):
 
     return warnings, language, code
 
-def get_files(folder):
+def get_files(folder, show_all=False):
     patterns = load_wrenchignore(folder)
     files = []
     for root, dirs, filenames in os.walk(folder):
-        dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
+        dirs[:] = [
+            d for d in dirs
+            if d not in IGNORE_DIRS and (show_all or d.lower() not in DEFAULT_SKIP_DIRS)
+        ]
         for f in filenames:
             filepath = os.path.join(root, f)
             if detect_language(f) is not None and not is_ignored(filepath, patterns):
@@ -271,7 +279,7 @@ def analyse_single_file(filename, args):
         save_report(1, {language}, {filename: warnings} if warnings else {})
 
 def analyse_folder(folder, args):
-    files = get_files(folder)
+    files = get_files(folder, show_all=args.all)
 
     if not files:
         print("No supported files found in folder.")

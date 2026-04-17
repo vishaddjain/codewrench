@@ -65,14 +65,14 @@ class MediumDetectors(BaseDetectors):
             self.warnings.append({
                 "message": f"Bare except at line {node.lineno} — catches everything, be specific.",
                 "line": node.lineno,
-                "confidence": "high",
+                "confidence": "medium" if self.depth >= 1 else "low",
                 "function": self.current_function
             })
         elif exception_type == "Exception":
             self.warnings.append({
                 "message": f"Overly broad 'except Exception' at line {node.lineno} — catch specific exceptions.",
                 "line": node.lineno,
-                "confidence": "medium",
+                "confidence": "low",
                 "function": self.current_function
             })
         if self.depth >= 1:
@@ -113,7 +113,7 @@ class MediumDetectors(BaseDetectors):
             self.warnings.append({
                 "message": f"Import is at function level instead of top at line {node.lineno}.",
                 "line": node.lineno,
-                "confidence": "high",
+                "confidence": "low",
                 "function": self.current_function
             })
         self.generic_visit(node)

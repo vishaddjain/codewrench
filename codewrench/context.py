@@ -10,17 +10,19 @@ class ContextAnalyser:
 
     def __init__(self, filename):
         self.filename = filename
+        self.normalized_path = os.path.normpath(self.filename).lower()
+        self.path_parts = self.normalized_path.split(os.sep)
         self.is_test_file = self._check_test_file()
+        self.is_script_file = self._check_script_file()
+        self.is_tutorial_file = self._check_tutorial_file()
         self.function_contexts = {}
         self._call_counts = {}
 
     def _check_test_file(self):
-        normalized = os.path.normpath(self.filename).lower()
-        parts = normalized.split(os.sep)
-        if "tests" in parts or "js_tests" in parts or "__tests__" in parts:
+        if "tests" in self.path_parts or "js_tests" in self.path_parts or "__tests__" in self.path_parts:
             return True
 
-        base = os.path.basename(normalized)
+        base = os.path.basename(self.normalized_path)
         name, ext = os.path.splitext(base)
         return (
             name.startswith("test_") or
@@ -29,6 +31,13 @@ class ContextAnalyser:
             ".spec." in base or
             "spec" in name
         )
+
+    def _check_script_file(self):
+        return "scripts" in self.path_parts or "script" in self.path_parts
+
+    def _check_tutorial_file(self):
+        tutorial_dirs = {"docs", "docs_src", "examples", "example", "tutorial", "tutorials"}
+        return any(part in tutorial_dirs for part in self.path_parts)
     
     def _walk(self, node, visitor):
         visitor(node)
@@ -65,4 +74,3 @@ class ContextAnalyser:
         return self.function_contexts.get(function_name, {
             "is_cold": False, "is_hot": False, "call_count": -1
         })    
-
